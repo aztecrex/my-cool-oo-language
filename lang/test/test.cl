@@ -1,0 +1,5 @@
+type Boolean /*{
+  True;
+  False;
+}*/;
+

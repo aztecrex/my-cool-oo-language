@@ -1,2 +1,8 @@
+import Clutch.Parser
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = do
+  source <- readFile "test/test.cl"
+  print $ parseString source
+  putStrLn ""
+
