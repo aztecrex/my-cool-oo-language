@@ -1,6 +1,6 @@
 interface Foundation {
-  const : a -> b -> a;
-  id : a -> a;
+  const<A,B> : A -> B -> A;
+  id<A> : A -> A;
 
   id x = x;
   const x _ = x;
@@ -10,17 +10,17 @@ Foundation Builtin;
 
 use Builtin.{const, id};
 
-type Option t {
-  Some : t -> Option t;
-  None : Option t;
+type Option<A> {
+  Some : A -> Option<A>;
+  None : Option<A>;
 };
 
-interface Indexed t {
-  (t a).at : WholeNumber -> a;
+interface Indexed<T> {
+  at : WholeNumber -> T;
 };
 
-interface Sized t {
-  t.size : WholeNumber
+interface Sized {
+  size : WholeNumber
 };
 
 type Array t {
@@ -28,95 +28,88 @@ type Array t {
   native Empty : Array t;
 };
 
-(Indexed, Sized) Array {
+Array<T> implements Indexed<T> {
   native at;
-  native size;
-}
-
-Sized Array {
-  native size;
-}
-
-Indexed Option {
-  (Some x).at 0 = x;
-  any.at any = error "index out of bounds";
-}
-
-
-interface Functor t {
-  (t a).map : (a -> b) -> t b;
-  (t u).fill : v -> t v;
-
-  t.fill a = t.map (const a);
 };
 
-Option implements Functor Option {
-  (Some x).map f = Some (f x);
+Array<_> implements Sized {
+  native size;
+};
+
+Option<A> implements Indexed<A> {
+  Some(a).at 0 = a;
+  _.at _ = error "index out of bounds";
+}
+
+interface Functor<A> T {
+  map<B> : (A -> B) -> T<B>;
+  fill<B> : B -> T<B>;
+
+  fill a = map (const a);
+};
+
+Option<A> implements Functor<A> {
+  Some(x).map f  = Some(f x);
   None.map _ = None;
+};
+
+interface Applicative<A> T {
+  T<A> implements Functor<A>;
+
+  static pure : A -> T<A>
+};
+
+Option<A> implements Applicative<A> {
+  pure = Some; // implicit polymorphism OK?
 }
 
-interface Applicative t _ {
-  t implements Functor;
-  t.pure x : t x;
-}
+interface Monad<A> T {
+  T<A> implements Applicative<A>;
 
-Option implements Applicative Option {
-  Option.pure x = Some x;
-}
+  bind<B> : (A -> T<B>) -> T<B>;
+  T<T<A>>.join : T<A>;
 
-interface Monad t _ {
-  t implements Applicative;
+  bind f = map(f).join;
+  join = bind id;
 
-  (t u).bind : (u -> t v) -> t v
-  (t (t u)).join : t u;
+};
 
-  a.bind f = a.map(f).join
-  a.join = a.bind id
-}
 
-Option implements Monad Option {
+Option<A> implements Monad<A> {
   (Some x).bind f = f x;
   None.bind _ = None;
+};
+
+interface Sequence<A> T {
+  forEach : (A -> Void) -> Void;
+};
+
+native Array<A> implements Sequence<A>;
+
+interface FromBuffer<A> T {
+  static fromBuffer : Buffer<A> -> T;
 }
 
-t implements Functor t {
-  t implements Indexed;
-  t implements FromBuffer;
-  array.map f'(x -> y) = {
-      buffer = Buffer y (array.length);
-      [0..array.length-1].forEach i -> {
-        buffer.set i array[i];
-      };
-      return t.fromBuffer buffer;
+native Array<A> implements FromBuffer<A>;
+
+Array<A> implements Functor<A> {
+  array.map f = {
+    buffer = Buffer<A>; // mutable structure, can we make it safe?
+    array.forEach buffer.append;
+    return Array.fromBuffer buffer;
   };
 };
 
-t implements Applicative t {
-  t implements Indexed;
-  t implements FromBuffer;
-  t implements Container;
-  t.pure = t.contain;
+Array<A> implements Applicative<A> {
+  pure = Array 1;
 };
 
-t implements Monad  t{
-  t implements Indexed;
-  t implements FromBuffer;
-  array.bind f'(x -> t y) = {
-    arrays = array.map f;
-    length = arrays.map(array -> array.length).sum;
-    buffer = Buffer y length;
-    cursor = Mutable Int 0;
-    arrays.forEach array -> {
-      array.forEach e -> {
-        buffer[cursor] = e;
-        e = e.next;
-      };
-    };
-    return t.fromBuffer buffer;
+Array<A> implements Monad<A> {
+  nested.join = {
+    buffer = Buffer<A>;
+    nested.forEach :array -> array.forEach buffer.append; // precedence?
   };
 };
-
-
 
 
 native type AsciiText;
