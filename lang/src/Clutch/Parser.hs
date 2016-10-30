@@ -7,6 +7,8 @@ import Text.Megaparsec.String -- input stream is of type ‘String’
 import qualified Text.Megaparsec.Lexer as L
 
 -- Syntax Tree
+data CompilationUnit = CompilationUnit [Statement] deriving (Show)
+
 data Statement =
    TypeDeclaration String
    deriving (Show)
@@ -26,8 +28,8 @@ symbol = L.symbol sc
 semi :: Parser String
 semi = symbol ";"
 
--- block :: Parser a -> Parser a
--- block = between (symbol "{") (symbol "}")
+block :: Parser a -> Parser a
+block = between (symbol "{") (symbol "}")
 
 reservedWord :: String -> Parser()
 reservedWord w = string w *> notFollowedBy alphaNumChar *> sc
@@ -44,8 +46,12 @@ identifier = (lexeme . try) (p >>= check)
 
 -- Parser
 
-clutchParser :: Parser Statement
-clutchParser = sc *> statement <* eof
+clutchParser :: Parser CompilationUnit
+clutchParser = do
+  sc
+  seq <- some statement
+  eof
+  return $ CompilationUnit seq
 
 statement :: Parser Statement
 statement = statement' <* semi
@@ -62,7 +68,7 @@ typeStatement = do
 
 -- Runner
 
-parseString :: String -> Statement
+parseString :: String -> CompilationUnit
 parseString source =
   case parse clutchParser "" source of
     Left e -> error $ show e
