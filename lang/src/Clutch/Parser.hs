@@ -10,13 +10,17 @@ import qualified Text.Megaparsec.Lexer as L
 data CompilationUnit = CompilationUnit [Statement] deriving (Show)
 
 data Statement =
-  TypeDeclaration String [TypeStatement]
+  TypeDeclaration TypeLiteral [TypeStatement]
   deriving (Show)
 
 data TypeStatement =
   Class String
   deriving (Show)
 
+data TypeLiteral = 
+   TypeLiteral String [TypeLiteral]
+   deriving (Show)
+   
 -- Lexer
 sc :: Parser ()
 sc = L.space (void spaceChar) lineComment blockComment
@@ -32,8 +36,14 @@ symbol = L.symbol sc
 semi :: Parser String
 semi = symbol ";"
 
+comma :: Parser String
+comma = symbol ","
+
 block :: Parser a -> Parser a
 block = between (symbol "{") (symbol "}")
+
+angle :: Parser a -> Parser a
+angle = between (symbol "<") (symbol ">")
 
 reservedWord :: String -> Parser()
 reservedWord w = string w *> notFollowedBy alphaNumChar *> sc
@@ -66,9 +76,9 @@ statement' = typeDeclaration
 typeDeclaration :: Parser Statement
 typeDeclaration = do
   reservedWord "type"
-  name <- identifier
+  typeId <- typeLiteral
   statements <- block (many typeStatement) 
-  return $ TypeDeclaration name statements
+  return $ TypeDeclaration typeId statements
 
 typeStatement :: Parser TypeStatement
 typeStatement = typeStatement' <* semi
@@ -79,6 +89,11 @@ typeStatement' = clazz
 clazz :: Parser TypeStatement
 clazz = reservedWord "class" >> identifier >>= \id -> return $ Class id
 
+typeLiteral :: Parser TypeLiteral
+typeLiteral = do
+  name <- identifier
+  maybeParams <- optional (angle (sepBy typeLiteral comma))
+  return $ TypeLiteral name (maybe [] id maybeParams) 
 
 -- Runner
 
