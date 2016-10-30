@@ -1,19 +1,53 @@
+interface Foundation {
+  const : a -> b -> a;
+  id : a -> a;
 
-type Option t {
-  Some(t);
-  None
+  id x = x;
+  const x _ = x;
 };
 
-const : a -> b -> a;
-const x _ = x;
+Foundation Builtin;
 
-id : a -> a;
-id x = x;
+use Builtin.{const, id};
 
-interface Functor t _ {
-  (t x).map : (x -> y) -> t y
-  (t u).fill : v -> t v
-  a.fill y = a.map (const y)
+type Option t {
+  Some : t -> Option t;
+  None : Option t;
+};
+
+interface Indexed t {
+  (t a).at : WholeNumber -> a;
+};
+
+interface Sized t {
+  t.size : WholeNumber
+};
+
+type Array t {
+  native Array : WholeNumber -> t -> Array t;
+  native Empty : Array t;
+};
+
+(Indexed, Sized) Array {
+  native at;
+  native size;
+}
+
+Sized Array {
+  native size;
+}
+
+Indexed Option {
+  (Some x).at 0 = x;
+  any.at any = error "index out of bounds";
+}
+
+
+interface Functor t {
+  (t a).map : (a -> b) -> t b;
+  (t u).fill : v -> t v;
+
+  t.fill a = t.map (const a);
 };
 
 Option implements Functor Option {
@@ -50,7 +84,7 @@ t implements Functor t {
   t implements FromBuffer;
   array.map f'(x -> y) = {
       buffer = Buffer y (array.length);
-      [0..array.length-1].forEach :i -> {
+      [0..array.length-1].forEach i -> {
         buffer.set i array[i];
       };
       return t.fromBuffer buffer;
@@ -69,11 +103,11 @@ t implements Monad  t{
   t implements FromBuffer;
   array.bind f'(x -> t y) = {
     arrays = array.map f;
-    length = arrays.map(:ary -> ary.length).sum;
+    length = arrays.map(array -> array.length).sum;
     buffer = Buffer y length;
     cursor = Mutable Int 0;
-    arrays.forEach :ary -> {
-      ary.forEach :e -> {
+    arrays.forEach array -> {
+      array.forEach e -> {
         buffer[cursor] = e;
         e = e.next;
       };
