@@ -56,5 +56,19 @@ integer  = lexeme L.integer
 semi :: Parser String
 semin = symbol ";"
 
+rword :: String -> Parser ()
+rword w = string W *> notFollowedBy alphaNumChar *> sc
+
+rws :: [String]
+rws = ["if", "then", "else", "while", "do", "skip", "true", "false", "not", "and", "or"]
+
+identifier :: Parser String
+identifier = (lexeme . try) (p >>= check)
+  where
+    p       = (:) <$> leggerChar <*> many alphaNumChar
+    check x = if x `elem` rws
+               then fail $ "keyword " ++ show x ++ "cannot be an identifier"
+               else return x
+
 
 
