@@ -10,8 +10,12 @@ import qualified Text.Megaparsec.Lexer as L
 data CompilationUnit = CompilationUnit [Statement] deriving (Show)
 
 data Statement =
-   TypeDeclaration String
-   deriving (Show)
+  TypeDeclaration String [TypeStatement]
+  deriving (Show)
+
+data TypeStatement =
+  Class String
+  deriving (Show)
 
 -- Lexer
 sc :: Parser ()
@@ -41,7 +45,7 @@ identifier = (lexeme . try) (p >>= check)
       check x = if elem x reservedWords
                   then fail $ "reserved word " ++ show x ++ " cannot be an identifier"
                   else return x
-      reservedWords = ["type"]
+      reservedWords = ["type","class"]
 
 
 -- Parser
@@ -57,13 +61,23 @@ statement :: Parser Statement
 statement = statement' <* semi
 
 statement' :: Parser Statement
-statement' = typeStatement
+statement' = typeDeclaration
 
-typeStatement :: Parser Statement
-typeStatement = do
+typeDeclaration :: Parser Statement
+typeDeclaration = do
   reservedWord "type"
   name <- identifier
-  return $ TypeDeclaration name
+  statements <- block (many typeStatement) 
+  return $ TypeDeclaration name statements
+
+typeStatement :: Parser TypeStatement
+typeStatement = typeStatement' <* semi
+
+typeStatement' :: Parser TypeStatement
+typeStatement' = clazz
+
+clazz :: Parser TypeStatement
+clazz = reservedWord "class" >> identifier >>= \id -> return $ Class id
 
 
 -- Runner
