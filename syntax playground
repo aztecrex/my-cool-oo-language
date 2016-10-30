@@ -10,25 +10,30 @@ Foundation Builtin;
 
 use Builtin.{const, id};
 
+type Boolean {
+  True;
+  False;
+};
+
 type Option<A> {
   Some : A -> Option<A>;
   None : Option<A>;
 };
 
-interface Indexed<T> {
-  at : WholeNumber -> T;
+interface Indexed<A> {
+  @O1 at : WholeNumber -> A;
 };
 
 interface Sized {
-  size : WholeNumber
+  @O1 size : WholeNumber
 };
 
-type Array t {
-  native Array : WholeNumber -> t -> Array t;
-  native Empty : Array t;
+type Array<A> {
+  native Array : WholeNumber size -> A initialValue -> Array<A>;
+  native Empty : Array;
 };
 
-Array<T> implements Indexed<T> {
+Array<A> implements Indexed<A> {
   native at;
 };
 
@@ -39,9 +44,15 @@ Array<_> implements Sized {
 Option<A> implements Indexed<A> {
   Some(a).at 0 = a;
   _.at _ = error "index out of bounds";
+
 }
 
-interface Functor<A> T {
+Option<_> implements Sized {
+  Some(_).size = 1;
+  None.size = 0;
+}
+
+interface Functor<A> T<A> {
   map<B> : (A -> B) -> T<B>;
   fill<B> : B -> T<B>;
 
@@ -53,17 +64,18 @@ Option<A> implements Functor<A> {
   None.map _ = None;
 };
 
-interface Applicative<A> T {
+interface Applicative<A> T<A> {
   T<A> implements Functor<A>;
 
   static pure : A -> T<A>
+  T<C -> D>.apply<C,D> : T<C> -> T<D>
 };
 
 Option<A> implements Applicative<A> {
-  pure = Some; // implicit polymorphism OK?
+  pure = Some;
 }
 
-interface Monad<A> T {
+interface Monad<A> T<A> {
   T<A> implements Applicative<A>;
 
   bind<B> : (A -> T<B>) -> T<B>;
@@ -108,8 +120,12 @@ Array<A> implements Monad<A> {
   nested.join = {
     buffer = Buffer<A>;
     nested.forEach :array -> array.forEach buffer.append; // precedence?
+    return Array.fromBuffer buffer;
   };
 };
+
+
+
 
 native type CodePoint;
 
