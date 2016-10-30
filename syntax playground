@@ -1,0 +1,111 @@
+
+type Option t {
+  Some(t);
+  None
+};
+
+const : a -> b -> a;
+const x _ = x;
+
+id : a -> a;
+id x = x;
+
+interface Functor t _ {
+  (t x).map : (x -> y) -> t y
+  (t u).fill : v -> t v
+  a.fill y = a.map (const y)
+};
+
+Option implements Functor Option {
+  (Some x).map f = Some (f x);
+  None.map _ = None;
+}
+
+interface Applicative t _ {
+  t implements Functor;
+  t.pure x : t x;
+}
+
+Option implements Applicative Option {
+  Option.pure x = Some x;
+}
+
+interface Monad t _ {
+  t implements Applicative;
+
+  (t u).bind : (u -> t v) -> t v
+  (t (t u)).join : t u;
+
+  a.bind f = a.map(f).join
+  a.join = a.bind id
+}
+
+Option implements Monad Option {
+  (Some x).bind f = f x;
+  None.bind _ = None;
+}
+
+t implements Functor t {
+  t implements Indexed;
+  t implements FromBuffer;
+  array.map f'(x -> y) = {
+      buffer = Buffer y (array.length);
+      [0..array.length-1].forEach :i -> {
+        buffer.set i array[i];
+      };
+      return t.fromBuffer buffer;
+  };
+};
+
+t implements Applicative t {
+  t implements Indexed;
+  t implements FromBuffer;
+  t implements Container;
+  t.pure = t.contain;
+};
+
+t implements Monad  t{
+  t implements Indexed;
+  t implements FromBuffer;
+  array.bind f'(x -> t y) = {
+    arrays = array.map f;
+    length = arrays.map(:ary -> ary.length).sum;
+    buffer = Buffer y length;
+    cursor = Mutable Int 0;
+    arrays.forEach :ary -> {
+      ary.forEach :e -> {
+        buffer[cursor] = e;
+        e = e.next;
+      };
+    };
+    return t.fromBuffer buffer;
+  };
+};
+
+
+
+
+native type AsciiText;
+native type LatinText;
+native type CodePoint;
+
+interface Text T {
+  T implements Array CodePoint;
+};
+
+AsciiText implements Text {
+  native [n];
+}
+
+interface LocalPart T {
+  T implements Text;
+};
+interface DomainPart;
+
+LatinText:x implements LocalPart {
+  // constrain x
+}
+
+AsciiText:x implements DomainPart {
+  // constrain x
+}
