@@ -36,5 +36,25 @@ data Stmt = Seq [Stmt]
           | Skip
             deriving (Show)
 
+sc :: Parser ()
+sc = L.space (void spaceChar) lineCmnt blockCmnt
+  where lineCmnt  = L.skipLineComment "//"
+        blockCmnt = L.skipBlockComment "/*" "*/"
+
+lexeme :: Parser a -> Parser a
+lexeme = L.lexeme sc
+
+symbol :: String -> Parser String
+symbol = L.symbol sc
+
+parens :: Parser a -> Parser a
+parens = between (symbol "(") (symbol ")")
+
+integer :: Parser Integer
+integer  = lexeme L.integer
+
+semi :: Parser String
+semin = symbol ";"
+
 
 
