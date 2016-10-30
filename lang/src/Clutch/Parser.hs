@@ -1,5 +1,6 @@
 module Clutch.Parser (parseString) where
 
+import Data.Maybe (isJust, fromJust)
 import Control.Monad (void)
 import Text.Megaparsec
 import Text.Megaparsec.Expr
@@ -10,7 +11,7 @@ import qualified Text.Megaparsec.Lexer as L
 data CompilationUnit = CompilationUnit [Statement] deriving (Show)
 
 data Statement =
-  TypeDeclaration TypeLiteral [TypeStatement]
+  TypeDeclaration TypeLiteral [TypeStatement] [Modifier]
   deriving (Show)
 
 data TypeStatement =
@@ -20,7 +21,9 @@ data TypeStatement =
 data TypeLiteral = 
    TypeLiteral String [TypeLiteral]
    deriving (Show)
-   
+  
+data Modifier = Native deriving (Show)
+ 
 -- Lexer
 sc :: Parser ()
 sc = L.space (void spaceChar) lineComment blockComment
@@ -55,7 +58,7 @@ identifier = (lexeme . try) (p >>= check)
       check x = if elem x reservedWords
                   then fail $ "reserved word " ++ show x ++ " cannot be an identifier"
                   else return x
-      reservedWords = ["type","class"]
+      reservedWords = ["type", "class", "native"]
 
 
 -- Parser
@@ -75,10 +78,13 @@ statement' = typeDeclaration
 
 typeDeclaration :: Parser Statement
 typeDeclaration = do
+  maybeNative <- fmap (const Native) <$> optional (reservedWord "native")
   reservedWord "type"
   typeId <- typeLiteral
   maybeStatements <- optional (block (many typeStatement)) 
   return $ TypeDeclaration typeId (maybe [] id maybeStatements)
+          (fmap fromJust (filter isJust [maybeNative]))
+            
 
 typeStatement :: Parser TypeStatement
 typeStatement = typeStatement' <* semi
