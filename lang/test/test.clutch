@@ -1,0 +1,8 @@
+type Boolean {
+  class True;
+  class False;
+};
+
+type Array {};
+
+
