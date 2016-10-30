@@ -36,6 +36,9 @@ symbol = L.symbol sc
 semi :: Parser String
 semi = symbol ";"
 
+comma :: Parser String
+comma = symbol ","
+
 block :: Parser a -> Parser a
 block = between (symbol "{") (symbol "}")
 
@@ -89,7 +92,7 @@ clazz = reservedWord "class" >> identifier >>= \id -> return $ Class id
 typeLiteral :: Parser TypeLiteral
 typeLiteral = do
   name <- identifier
-  maybeParams <- optional (angle (many typeLiteral))
+  maybeParams <- optional (angle (sepBy typeLiteral comma))
   return $ TypeLiteral name (maybe [] id maybeParams) 
 
 -- Runner
