@@ -3,6 +3,8 @@ type Boolean {
   class False;
 };
 
-type Array {};
+type Array<A> {
+  
+};
 
 
