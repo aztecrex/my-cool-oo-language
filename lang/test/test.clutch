@@ -3,9 +3,7 @@ type Boolean {
   class False;
 };
 
-type Array<A> {
-  
-};
+type Array<A>;
 
 
 type Complex<T<A>,B,U<C,D>> {};

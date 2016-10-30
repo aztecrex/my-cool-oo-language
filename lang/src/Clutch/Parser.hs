@@ -63,9 +63,9 @@ identifier = (lexeme . try) (p >>= check)
 clutchParser :: Parser CompilationUnit
 clutchParser = do
   sc
-  seq <- some statement
+  statements <- some statement
   eof
-  return $ CompilationUnit seq
+  return $ CompilationUnit statements
 
 statement :: Parser Statement
 statement = statement' <* semi
@@ -77,8 +77,8 @@ typeDeclaration :: Parser Statement
 typeDeclaration = do
   reservedWord "type"
   typeId <- typeLiteral
-  statements <- block (many typeStatement) 
-  return $ TypeDeclaration typeId statements
+  maybeStatements <- optional (block (many typeStatement)) 
+  return $ TypeDeclaration typeId (maybe [] id maybeStatements)
 
 typeStatement :: Parser TypeStatement
 typeStatement = typeStatement' <* semi
