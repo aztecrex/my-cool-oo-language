@@ -7,7 +7,7 @@ import Text.Megaparsec.String -- input stream is of type ‘String’
 import qualified Text.Megaparsec.Lexer as L
 
 
- BExpr = BoolConst Bool
+data BExpr = BoolConst Bool
        | Not BExpr
        | BBinary BBinOp BExpr BExpr
        | RBinary RBinOp AExpr AExpr
@@ -31,7 +31,7 @@ data ABinOp = Add
 
 data Stmt = Seq [Stmt]
           | Assign String AExpr
-          | If Bxpr Stmt Stmt
+          | If BExpr Stmt Stmt
           | While BExpr Stmt
           | Skip
             deriving (Show)
@@ -54,10 +54,10 @@ integer :: Parser Integer
 integer  = lexeme L.integer
 
 semi :: Parser String
-semin = symbol ";"
+semi = symbol ";"
 
 rword :: String -> Parser ()
-rword w = string W *> notFollowedBy alphaNumChar *> sc
+rword w = string w *> notFollowedBy alphaNumChar *> sc
 
 rws :: [String]
 rws = ["if", "then", "else", "while", "do", "skip", "true", "false", "not", "and", "or"]
@@ -65,7 +65,7 @@ rws = ["if", "then", "else", "while", "do", "skip", "true", "false", "not", "and
 identifier :: Parser String
 identifier = (lexeme . try) (p >>= check)
   where
-    p       = (:) <$> leggerChar <*> many alphaNumChar
+    p       = (:) <$> letterChar <*> many alphaNumChar
     check x = if x `elem` rws
                then fail $ "keyword " ++ show x ++ "cannot be an identifier"
                else return x
