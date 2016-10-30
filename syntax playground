@@ -111,28 +111,48 @@ Array<A> implements Monad<A> {
   };
 };
 
-
-native type AsciiText;
-native type LatinText;
 native type CodePoint;
 
 interface Text T {
-  T implements Array CodePoint;
+  T implements Sequence<CodePoint>;
+  T implements Indexed<CodePoint>;
+  T implements Sized;
 };
 
-AsciiText implements Text {
-  native [n];
-}
+native type AsciiText;
+native AsciiText implements Text;
+
+native type LatinText;
+native LatinText implements Text;
+
+type LocalPart {
+  LocalPart : LatinText -> LocalPart;
+
+  LocalPart text = {
+    // ... validate the text
+    return True;  // one possible thing, maybe the validator returns boolean? or should it just error?
+  };
+
+};
+
+type DomainPart {
+  DomainPart : AsciiText -> DomainPart;
+
+  DomainPart text = {
+    // ... validate the text
+    error "domain part cannot exceed 256 characters"; // one possible thing, error
+  };
+};
+
 
 interface LocalPart T {
   T implements Text;
 };
-interface DomainPart;
+interface DomainPart T {
+  T implements Text;
+};
 
-LatinText:x implements LocalPart {
-  // constrain x
-}
-
-AsciiText:x implements DomainPart {
-  // constrain x
-}
+LatinText implements LocalPart {
+  // ... perform validations
+};
+AsciiText implements DomainPart;
