@@ -1,10 +1,13 @@
 module Main where
 
-import ParseWhile
+import System.Environment (getArgs)
+import Clutch.Parser
 
 main :: IO ()
 main = do
-  let source = "skip;skip"
+  fn:args <- getArgs
+  source <- readFile fn
   let program = parseString source
   print program
   putStrLn ""
+
