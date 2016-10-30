@@ -1,6 +1,10 @@
 module Main where
 
-import Lib
+import ParseWhile
 
 main :: IO ()
-main = someFunc
+main = do
+  let source = "skip;"
+  let program = parseString source
+  print program
+  putStrLn ""
