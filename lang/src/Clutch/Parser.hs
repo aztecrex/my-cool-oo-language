@@ -11,11 +11,8 @@ import qualified Text.Megaparsec.Lexer as L
 data CompilationUnit = CompilationUnit [Statement] deriving (Show)
 
 data Statement =
-  TypeDeclaration TypeLiteral [TypeStatement] [Modifier]
-  deriving (Show)
-
-data TypeStatement =
-  Class String
+    TypeDeclaration TypeLiteral [Statement] [Modifier]
+  | Class String
   deriving (Show)
 
 data TypeLiteral = 
@@ -66,33 +63,29 @@ identifier = (lexeme . try) (p >>= check)
 clutchParser :: Parser CompilationUnit
 clutchParser = do
   sc
-  statements <- some statement
+  statements <- statements topLevelStatement
   eof
   return $ CompilationUnit statements
 
-statement :: Parser Statement
-statement = statement' <* semi
+statements :: Parser Statement -> Parser [Statement]
+statements p = many (p <* semi) >>= \ss -> return  ss
 
-statement' :: Parser Statement
-statement' = typeDeclaration
+topLevelStatement :: Parser Statement
+topLevelStatement = typeDeclaration;
 
 typeDeclaration :: Parser Statement
 typeDeclaration = do
   maybeNative <- fmap (const Native) <$> optional (reservedWord "native")
   reservedWord "type"
   typeId <- typeLiteral
-  maybeStatements <- optional (block (many typeStatement)) 
+  maybeStatements <- optional (block (statements typeStatement)) 
   return $ TypeDeclaration typeId (maybe [] id maybeStatements)
           (fmap fromJust (filter isJust [maybeNative]))
             
+typeStatement :: Parser Statement
+typeStatement = clazz;
 
-typeStatement :: Parser TypeStatement
-typeStatement = typeStatement' <* semi
-
-typeStatement' :: Parser TypeStatement
-typeStatement' = clazz
-
-clazz :: Parser TypeStatement
+clazz :: Parser Statement
 clazz = reservedWord "class" >> identifier >>= \id -> return $ Class id
 
 typeLiteral :: Parser TypeLiteral
