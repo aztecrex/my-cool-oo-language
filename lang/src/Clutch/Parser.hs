@@ -14,11 +14,17 @@ data Statement =
     TypeDeclaration TypeLiteral [Statement] [Modifier]
   | Class String
   | InterfaceDeclaration TypeLiteral (Maybe TypeLiteral) [Statement]
+  | MethodDeclaration (Maybe TypeLiteral) MethodLiteral TypeLiteral
   | Placeholder
   deriving (Show)
 
 data TypeLiteral = 
-   TypeLiteral String [TypeLiteral]
+    TypeTerm [TypeLiteral]
+    Function [TypeLiteral]
+  deriving (Show)
+  
+data MethodLiteral = 
+     MethodLiteral String [TypeLiteral]
    deriving (Show)
   
 data Modifier = Native deriving (Show)
@@ -41,11 +47,20 @@ semi = symbol ";"
 comma :: Parser String
 comma = symbol ","
 
+colon :: Parser String
+colon = symbol ":"
+
+arrow :: Parser String
+arrow = symbol "->"
+
 block :: Parser a -> Parser a
 block = between (symbol "{") (symbol "}")
 
 angle :: Parser a -> Parser a
 angle = between (symbol "<") (symbol ">")
+
+paren :: Parser a -> Parser a
+paren = between (symbol "(") (symbol ")")
 
 reservedWord :: String -> Parser()
 reservedWord w = string w *> notFollowedBy alphaNumChar *> sc
@@ -90,11 +105,17 @@ typeStatement = clazz;
 clazz :: Parser Statement
 clazz = reservedWord "class" >> identifier >>= \id -> return $ Class id
 
-typeLiteral :: Parser TypeLiteral
-typeLiteral = do
+typeTerm :: Parser TypeLiteral
+typeTerm = do
   name <- identifier
-  maybeParams <- optional (angle (sepBy typeLiteral comma))
-  return $ TypeLiteral name (maybe [] id maybeParams) 
+  maybeParams <- optional (angle (sepBy1 typeLiteral comma))
+  return $ TypeTerm name (maybe [] id maybeParams) 
+
+typeLiteral :: Parser TypeLiteral
+typeLiteral =
+      sepBy1 typeLiteral arrow
+  <|> paren typeLiteral
+  <|> typeTerm
 
 interfaceDeclaration :: Parser Statement
 interfaceDeclaration = do
@@ -105,7 +126,21 @@ interfaceDeclaration = do
   return $ InterfaceDeclaration ifcId maybeBinding (fromMaybe [] maybeStatements)
 
 interfaceStatement :: Parser Statement
-interfaceStatement = reservedWord "placeholder" >>= \_ -> return Placeholder
+interfaceStatement = method
+
+method :: Parser Statement
+method = do
+  methodId <- methodLiteral
+  colon
+  valueId <- typeLiteral
+  return $ MethodDeclaration Nothing methodId valueId
+
+methodLiteral :: Parser MethodLiteral
+methodLiteral = do
+  name <- identifier
+  maybeParams <- optional (angle (sepBy typeLiteral comma))
+  return $ MethodLiteral name (maybe [] id maybeParams) 
+
 
 
 -- Runner

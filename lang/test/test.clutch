@@ -8,9 +8,11 @@ native type Array<A>;
 type Complex<T<A>,B,U<C,D>> {};
 
 interface Indexed<A> {
+  at : WholeNumber -> A;
 };
 
 interface Functor<A> T<A> {
+//  map<B> : (A -> B) -> T<B>
 };
 
 
