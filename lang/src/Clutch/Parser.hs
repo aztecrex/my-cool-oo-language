@@ -1,5 +1,6 @@
 module Clutch.Parser (parseString) where
 
+import Data.Maybe (fromMaybe, isJust, fromJust)
 import Control.Monad (void)
 import Text.Megaparsec
 import Text.Megaparsec.Expr
@@ -10,17 +11,18 @@ import qualified Text.Megaparsec.Lexer as L
 data CompilationUnit = CompilationUnit [Statement] deriving (Show)
 
 data Statement =
-  TypeDeclaration TypeLiteral [TypeStatement]
-  deriving (Show)
-
-data TypeStatement =
-  Class String
+    TypeDeclaration TypeLiteral [Statement] [Modifier]
+  | Class String
+  | InterfaceDeclaration TypeLiteral (Maybe TypeLiteral) [Statement]
+  | Placeholder
   deriving (Show)
 
 data TypeLiteral = 
    TypeLiteral String [TypeLiteral]
    deriving (Show)
-   
+  
+data Modifier = Native deriving (Show)
+ 
 -- Lexer
 sc :: Parser ()
 sc = L.space (void spaceChar) lineComment blockComment
@@ -55,7 +57,7 @@ identifier = (lexeme . try) (p >>= check)
       check x = if elem x reservedWords
                   then fail $ "reserved word " ++ show x ++ " cannot be an identifier"
                   else return x
-      reservedWords = ["type","class"]
+      reservedWords = ["type", "class", "native", "placeholder"]
 
 
 -- Parser
@@ -63,30 +65,29 @@ identifier = (lexeme . try) (p >>= check)
 clutchParser :: Parser CompilationUnit
 clutchParser = do
   sc
-  seq <- some statement
+  statements <- statements topLevelStatement
   eof
-  return $ CompilationUnit seq
+  return $ CompilationUnit statements
 
-statement :: Parser Statement
-statement = statement' <* semi
+statements :: Parser Statement -> Parser [Statement]
+statements p = many (p <* semi) >>= \ss -> return  ss
 
-statement' :: Parser Statement
-statement' = typeDeclaration
+topLevelStatement :: Parser Statement
+topLevelStatement = typeDeclaration <|> interfaceDeclaration;
 
 typeDeclaration :: Parser Statement
 typeDeclaration = do
+  maybeNative <- fmap (const Native) <$> optional (reservedWord "native")
   reservedWord "type"
   typeId <- typeLiteral
-  statements <- block (many typeStatement) 
-  return $ TypeDeclaration typeId statements
+  maybeStatements <- optional (block (statements typeStatement)) 
+  return $ TypeDeclaration typeId (maybe [] id maybeStatements)
+          (fmap fromJust (filter isJust [maybeNative]))
+            
+typeStatement :: Parser Statement
+typeStatement = clazz;
 
-typeStatement :: Parser TypeStatement
-typeStatement = typeStatement' <* semi
-
-typeStatement' :: Parser TypeStatement
-typeStatement' = clazz
-
-clazz :: Parser TypeStatement
+clazz :: Parser Statement
 clazz = reservedWord "class" >> identifier >>= \id -> return $ Class id
 
 typeLiteral :: Parser TypeLiteral
@@ -94,6 +95,18 @@ typeLiteral = do
   name <- identifier
   maybeParams <- optional (angle (sepBy typeLiteral comma))
   return $ TypeLiteral name (maybe [] id maybeParams) 
+
+interfaceDeclaration :: Parser Statement
+interfaceDeclaration = do
+  reservedWord "interface"
+  ifcId <- typeLiteral
+  maybeBinding <- optional typeLiteral
+  maybeStatements <- optional (block (statements interfaceStatement))
+  return $ InterfaceDeclaration ifcId maybeBinding (fromMaybe [] maybeStatements)
+
+interfaceStatement :: Parser Statement
+interfaceStatement = reservedWord "placeholder" >>= \_ -> return Placeholder
+
 
 -- Runner
 

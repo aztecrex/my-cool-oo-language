@@ -3,10 +3,14 @@ type Boolean {
   class False;
 };
 
-type Array<A> {
-  
-};
-
+native type Array<A>;
 
 type Complex<T<A>,B,U<C,D>> {};
+
+interface Indexed<A> {
+};
+
+interface Functor<A> T<A> {
+};
+
 
