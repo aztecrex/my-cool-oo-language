@@ -67,7 +67,7 @@ Option<A> implements Functor<A> {
 interface Applicative<A> T<A> {
   T<A> implements Functor<A>;
 
-  static pure : A -> T<A>
+  static pure<B> : B -> T<B>
   T<C -> D>.apply<C,D> : T<C> -> T<D>
 };
 
@@ -98,11 +98,11 @@ interface Sequence<A> T {
 
 native Array<A> implements Sequence<A>;
 
-interface FromBuffer<A> T {
-  static fromBuffer : Buffer<A> -> T;
+interface FromBuffer T {
+  static fromBuffer<A> : Buffer<A> -> T;
 }
 
-native Array<A> implements FromBuffer<A>;
+native Array<A> implements FromBuffer;
 
 Array<A> implements Functor<A> {
   array.map f = {
